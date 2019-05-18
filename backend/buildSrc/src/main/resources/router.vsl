@@ -1,0 +1,67 @@
+package com.valapay.test.router
+
+import com.valapay.test.messages.api.*
+
+import com.valapay.test.entity.*
+import com.valapay.test.*
+
+import com.valapay.test.eventbus.*
+import io.vertx.core.Vertx
+import io.vertx.core.json.Json
+import io.vertx.ext.web.Router
+import io.vertx.ext.web.RoutingContext
+import com.valapay.test.coroutineHandler
+
+import io.netty.handler.codec.http.HttpResponseStatus
+import io.vertx.core.logging.LoggerFactory
+
+class ${router.name}(vertx:Vertx):AbstractRouter(vertx) {
+
+        private val logger = LoggerFactory.getLogger(${router.name}::class.java)
+
+        fun getUrl():String {
+            return  "${router.url}"
+        }
+        fun createRouter(): Router {
+        val router = Router.router(vertx)
+        #foreach($endpoint in $router.getEndpoints())
+        #set( $handler = $endpoint.getHandler() )
+        router.$endpoint.getMethod()("/$endpoint.getUrl()").coroutineHandler { $handler(it) }
+        #end
+        return router
+    }
+    #foreach($endpoint in $router.getEndpoints())
+    #set( $handler = $endpoint.getHandler() )
+    #set( $address = $utils.createEventBusAddressVarName($router,$endpoint) )
+    #set( $input = $endpoint.getInput() )
+    #set( $param = $endpoint.getParam() )
+    #set( $roles = $endpoint.getRolesAsString())
+    private suspend fun $handler(rc: RoutingContext) {// $endpoint
+
+        #if( $input)
+            try{
+                val requestBody = rc.bodyAsString
+                val message = Json.decodeValue<$input>(requestBody, $input::class.java)
+        #end
+
+        #if($input && $param)
+                val param = rc.request().getParam("$param")
+                handleBodyWithParam(rc,$addresses.$address,message,param)
+        #elseif($input)
+                handleBody(rc,$addresses.$address, message)
+        #elseif($param)
+                val param = rc.request().getParam("$param")
+                handleParam(rc,$addresses.$address,param)
+        #else
+                handleBody(rc,$addresses.$address,  EmptyMessage)
+        #end
+        #if( $input)
+            }
+            catch(e:Throwable){
+                sendAndLogErrorResponse(rc, e,HttpResponseStatus.BAD_REQUEST,"Can't decode json")
+            }
+        #end
+
+    }
+#end
+}

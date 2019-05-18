@@ -1,0 +1,11 @@
+package com.valapay.test.eventbus
+
+object $classname {
+#foreach($router in $routers)
+    #foreach($endpoint in $router.getEndpoints())
+        #set( $address = $utils.createEventBusAddress($router,$endpoint) )
+        #set( $name = $utils.createEventBusAddressVarName($router,$endpoint) )
+        const val $name = "$address"
+    #end
+#end
+}

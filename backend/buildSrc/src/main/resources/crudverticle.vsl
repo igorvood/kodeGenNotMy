@@ -1,0 +1,100 @@
+package com.valapay.test.verticles
+
+import com.valapay.test.entity.*
+import com.valapay.test.*
+import com.valapay.test.eventbus.CrudAddresses
+
+
+import com.valapay.test.repo.*
+import io.vertx.core.json.Json
+import io.vertx.core.json.JsonArray
+import io.vertx.core.json.JsonObject
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
+import com.valapay.test.utils.VertxUtils
+import org.springframework.beans.factory.annotation.Qualifier
+import io.netty.handler.codec.http.HttpResponseStatus
+import com.valapay.test.VerticleHandlerResponse
+import com.valapay.test.verticles.AbstractVerticle
+
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import io.vertx.kotlin.coroutines.dispatcher
+
+#set( $name = $entity.getName() )
+#set( $parents = $entity.getParents() )
+#set( $underscored = $utils.convertToUnderscores($name) )
+#set( $crud = $entity.getCrudFeatures())
+
+//$entity
+@Component
+#if (${entity.getAbstractVerticle()}) abstract #else open#end  class #if(${entity.getAbstractVerticle()}) Abstract#end${name}Verticle @Autowired constructor( @Qualifier("${name.toLowerCase()}repo") protected val jparepo: ${name}Repo) : AbstractVerticle<$name>(jparepo) {
+
+   @Autowired
+   private lateinit var vertxUtils:VertxUtils
+
+   override suspend fun start() {
+        val eventBus = vertx.eventBus()
+
+
+        #if($crud.getList())
+        #if($parents.isEmpty())
+        eventBus.consumer<EmptyMessage>(CrudAddresses.CRUDROUTER_HANDLE_GET_ALL_FOR_${underscored}) { message ->
+            GlobalScope.launch (vertx.dispatcher()){
+                vertxUtils.executeHandler({getAllHandler(message.body()) }, message)
+            }
+        }
+        #else
+            #foreach($parent in $parents)
+            #set( $underscored_parent= $utils.convertToUnderscores($parent))
+        eventBus.consumer<String>(CrudAddresses.CRUDROUTER_HANDLE_GET_${underscored}_FOR_${underscored_parent}) { message ->
+            GlobalScope.launch (vertx.dispatcher()){
+                vertxUtils.executeHandler({handleGetAllBy$parent(message.body())},message)
+            }
+        }
+            #end
+        #end
+        #end
+
+        #if($crud.getCreate())
+        eventBus.consumer<${name}>(CrudAddresses.CRUDROUTER_HANDLE_NEW_${underscored}) { message ->
+            GlobalScope.launch(vertx.dispatcher()) {
+                vertxUtils.executeHandler({createHandler(message.body()) }, message)}
+            }
+        #end
+
+        #if($crud.getGet())
+        eventBus.consumer<String>(CrudAddresses.CRUDROUTER_HANDLE_GET_${underscored}) { message ->
+            GlobalScope.launch (vertx.dispatcher()){
+                vertxUtils.executeHandler({getHandler(message.body()) }, message)}
+            }
+        #end
+
+        #if($crud.getUpdate())
+        eventBus.consumer<${name}>(CrudAddresses.CRUDROUTER_HANDLE_UPDATE_${underscored}) { message ->
+            GlobalScope.launch (vertx.dispatcher()){
+                vertxUtils.executeHandler({updateHandler(message.body()) }, message)}
+            }
+        #end
+
+        #if($crud.getDelete())
+        eventBus.consumer<String>( CrudAddresses.CRUDROUTER_HANDLE_DELETE_${underscored}) { message ->
+            GlobalScope.launch(vertx.dispatcher()) {
+                vertxUtils.executeHandler({deleteHandler(message.body().toLong()) }, message)}
+            }
+        #end
+  }
+
+#if($crud.getList() && $crud.getList())
+#if(!$parents.isEmpty())
+    #foreach($parent in $parents)
+    open fun handleGetAllBy$parent(parentId:String):VerticleHandlerResponse<Any>{
+        return VerticleHandlerResponse.ok(JsonArray(loadedEntitiesHook(
+            jparepo.findBy${parent}Id(parentId.message.toLong()),parentId.loggedInUserData).
+            map { JsonObject(Json.encode(it)) }))
+        }
+    #end
+#end
+#end
+
+}

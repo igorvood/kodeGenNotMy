@@ -1,0 +1,4 @@
+rootProject.name = 'front-generated'
+enableFeaturePreview('STABLE_PUBLISHING')
+
+

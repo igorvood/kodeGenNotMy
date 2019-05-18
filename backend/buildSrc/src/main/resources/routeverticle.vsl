@@ -1,0 +1,70 @@
+package com.valapay.test.verticles
+
+import com.valapay.test.utils.VertxUtils
+import com.valapay.test.messages.api.*
+import com.valapay.test.entity.*
+import com.valapay.test.eventbus.Addresses
+import io.vertx.kotlin.coroutines.CoroutineVerticle
+import com.valapay.test.VerticleHandlerResponse
+import io.vertx.core.Future
+
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import io.vertx.kotlin.coroutines.dispatcher
+
+#set( $name = $router.getName() )
+
+// $router
+abstract class Abstract${name}Verticle constructor(val vertxUtils: VertxUtils) : CoroutineVerticle() {
+
+override suspend fun start() {
+val eventBus = vertx.eventBus()
+
+#foreach($endpoint in $router.getEndpoints())
+    #set( $handler = $endpoint.getHandler() )
+    #set( $address = $utils.createEventBusAddressVarName($router,$endpoint) )
+    #set( $input = $endpoint.getInput() )
+    #set( $param = $endpoint.getParam() )
+    #set( $isAsync = $endpoint.getAsyncHandler() )
+    #if (!$input)
+        #if($param)
+            #set( $input = "String")
+        #else
+            #set( $input = "Any")
+        #end
+    #end
+    #set( $param = $endpoint.getParam() )
+        eventBus.consumer<$input>($addresses.$address) { message ->
+    #if ($isAsync)
+            GlobalScope.launch (vertx.dispatcher()) {
+                vertxUtils.executeSuspendHandler({$handler(message.body())},message)
+            }
+    #else
+            GlobalScope.launch(vertx.dispatcher()) {
+                vertxUtils.executeHandler({$handler(message.body())},message)
+            }
+    #end
+    }
+#end
+    }
+#foreach($endpoint in $router.getEndpoints())
+    #set( $handler = $endpoint.getHandler() )
+    #set( $address = $utils.createEventBusAddressVarName($router,$endpoint) )
+    #set( $input = $endpoint.getInput() )
+    #set( $param = $endpoint.getParam() )
+    #set( $isAsync = $endpoint.getAsyncHandler() )
+    #if (!$input)
+        #if($param)
+            #set( $input = "String")
+        #else
+            #set( $input = "Any")
+        #end
+    #end
+
+    #set( $param = $endpoint.getParam() )
+
+    //$endpoint
+    abstract #if ($isAsync) suspend #end  fun $handler(message:$input):VerticleHandlerResponse<Any>
+
+#end
+}

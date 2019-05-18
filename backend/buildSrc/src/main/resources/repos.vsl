@@ -1,0 +1,28 @@
+package com.valapay.test.repo
+
+import org.springframework.stereotype.Repository
+
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.jpa.repository.Modifying
+import javax.transaction.Transactional
+
+import com.valapay.test.entity.*
+
+#foreach($entity in $entities)
+   #set( $reponame = $entity.getName()+"Repo" )
+   #set( $name = $entity.getName() )
+   #set( $fields = $entity.getFields() )
+// $entity
+@Repository("${reponame.toLowerCase()}")
+interface $reponame : JpaRepository<$name,Long> {
+   #foreach($field in $fields)
+
+      #if ($field.findBy)
+        #set( $capitalized = $stringutils.capitalize($field.getName()))
+    fun findBy$capitalized($field.getName(): $field.getType()):List<$name>
+      #end
+    #end
+}
+
+#end

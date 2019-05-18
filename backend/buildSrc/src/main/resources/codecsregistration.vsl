@@ -1,0 +1,17 @@
+package com.valapay.test.eventbus
+
+import com.valapay.test.codec.JsonCodec
+import com.valapay.test.messages.api.*
+
+import io.vertx.core.Vertx
+import com.valapay.test.entity.*
+
+object $classname {
+    fun register(vertx: Vertx) {
+        val eventBus  = vertx.eventBus()
+        #foreach($message in $messages)
+        #set($name = $message.getName())
+        eventBus.registerDefaultCodec($name::class.java, JsonCodec($name::class.java))
+        #end
+    }
+}

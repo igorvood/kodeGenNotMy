@@ -1,0 +1,40 @@
+#set( $name = $entity.getName() )
+#set( $fields = $entity.getFields() )
+#set( $jsImports = $utils.getDistinctJSImports($fields) )
+#set( $subEntitiesImports = $utils.getSubEntitiesImports($entities, $messages, $fields) )
+#if($jsImports.size())
+import {
+#foreach($jsImport in $jsImports)
+    $jsImport,
+#end
+IsDate,
+IsArray,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+#end
+#foreach($subEntityImport in $subEntitiesImports)
+import { $subEntityImport } from './$subEntityImport'
+#end
+
+// $entity
+export class $name {
+#foreach($field in $fields)
+
+    #set( $ftype = $field.getType())
+    #set( $fname = $field.getName())
+    #set( $validators = $field.getValidators())
+    #set( $fieldAnnotations = $utils.createTsAnnotationsForField($field))
+    $fieldAnnotations
+    #foreach($validator in $validators)
+      #set($jsvalidator = $utils.createJsAnnotationFromKotlinAnnotation($validator))
+      #set($nested = $utils.checkIfValidateNested($jsvalidator))
+      #if($nested)
+      @Type(() => $ftype)
+      #end
+      $jsvalidator
+    #end
+    // $field
+     $fname!: $ftype;
+#end
+}
+

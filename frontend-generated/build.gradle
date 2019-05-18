@@ -1,0 +1,68 @@
+import com.valapay.codegen.TsMessagesMain
+
+buildscript {
+    repositories {
+        jcenter()
+        mavenLocal()
+        maven {
+            url "http://10.10.2.197:8081/artifactory/libs-release-local"
+        }
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.1'
+        classpath group: 'com.valapay.test', name: 'codegen', version: "1.0"
+        classpath group: 'com.valapay.test', name: 'api', version: "1.0"
+    }
+}
+
+plugins {
+    id "com.moowork.node" version "1.2.0"
+}
+
+
+group 'com.valapay.payroll.generated'
+version "1.0"
+
+def pathToGenerated = "generated/src/main/ts/"
+def generatedSrcDir = new File(buildDir, pathToGenerated)
+
+
+task incrementNpmPackageVersion(type: NpmTask) {
+    args = ['version', version]
+    workingDir = generatedSrcDir
+}
+task publishNpm(type: NpmTask) {
+    args = ['publish', '--registry', 'http://your-npm-registry-ip:4873']
+    workingDir = generatedSrcDir
+}
+
+task copyPackageJson(type: Copy) {
+    from file("src/main/resources/")
+    into generatedSrcDir
+}
+task installDeps(type: NpmTask) {
+    args = ['install']
+    workingDir = generatedSrcDir
+}
+
+task format(type: NpmTask) {
+    args = ['run', 'format']
+    workingDir = generatedSrcDir
+}
+task clean(type: Delete) {
+    delete buildDir
+}
+
+tasks.register("generateCode") {
+    doLast {
+        TsMessagesMain.generate(generatedSrcDir, "com.valapay.test.entity", "com.valapay.test.messages.api", "tsdto.vsl",
+                "com.valapay.test.annotations.frontend")
+    }
+}
+
+tasks.copyPackageJson.dependsOn generateCode
+tasks.installDeps.dependsOn copyPackageJson
+tasks.format.dependsOn installDeps
+tasks.incrementNpmPackageVersion.dependsOn format
+tasks.publishNpm.dependsOn incrementNpmPackageVersion
+

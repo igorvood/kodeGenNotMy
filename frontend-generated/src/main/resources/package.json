@@ -1,0 +1,16 @@
+{
+  "name": "messages",
+  "version": "1.0.0",
+  "description": "generated frontend messages",
+  "main": "index.js",
+  "types": "module.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "./node_modules/.bin/prettier --config ./.prettierrc --write *.ts"
+  },
+  "dependencies": {
+    "prettier": "1.16.4"
+  },
+  "author": "Codegen",
+  "license": "ISC"
+}

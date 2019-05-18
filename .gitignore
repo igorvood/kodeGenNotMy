@@ -1,0 +1,8 @@
+build
+**/build
+**/*.class
+**/.gradle
+**/.idea
+**/out
+**/.vertx
+**/gradle/wrapper/gradle-wrapper.jar
